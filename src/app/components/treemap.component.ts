@@ -16,7 +16,7 @@ export class TreemapComponent implements OnInit {
   constructor(private covidService: CovidService) {}
 
   ngOnInit() {
-    this.covidService.getSummary().subscribe(data => {
+    this.covidService.getSummaryGroupedByCountry().subscribe(data => {
       this.chartOptions = {
         tooltip: { formatter: '{b}: {c}' },
         series: [
@@ -25,7 +25,11 @@ export class TreemapComponent implements OnInit {
             data: data.map(d => ({
               name: d.country,
               value: d.totalConfirmed
-            }))
+            })),
+          label: {
+            show: true,
+            formatter: '{b}: {c}'
+          }
           }
         ]
       };

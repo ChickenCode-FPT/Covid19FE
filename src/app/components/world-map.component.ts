@@ -16,7 +16,7 @@ export class WorldMapComponent implements OnInit {
   constructor(private covidService: CovidService) {}
 
   ngOnInit() {
-    this.covidService.getSummary().subscribe(data => {
+    this.covidService.getSummaryGroupedByCountry().subscribe(data => {
       this.chartOptions = {
         tooltip: { trigger: 'item' },
         visualMap: {
@@ -33,12 +33,15 @@ export class WorldMapComponent implements OnInit {
             map: 'world',
             roam: true,
             data: data.map(d => ({
-              name: d.country,
+              name:  this.normalizeCountryName(d.country),
               value: d.totalConfirmed
             }))
           }
         ]
       };
     });
+  }
+  normalizeCountryName(country: string): string {
+  return country.toLowerCase();
   }
 }

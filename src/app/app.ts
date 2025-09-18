@@ -7,7 +7,7 @@ import { NgxEchartsDirective } from 'ngx-echarts';
   standalone: true,
   imports: [
     RouterOutlet,
-    NgxEchartsDirective 
+    // NgxEchartsDirective  
   ],
   templateUrl: './app.html',
   styleUrls: ['./app.css']
