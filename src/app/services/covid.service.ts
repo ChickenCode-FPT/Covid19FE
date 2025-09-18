@@ -19,6 +19,14 @@ interface ConfirmedRecord {
   Country: string;
 }
 
+interface DeathRecord {
+  RecordId: number;
+  LocationId: number;
+  RecordDate: string;
+  Quantity: number;
+  Country: string;
+}
+
 interface Location {
   LocationId: number;
   CountryRegion: string;
@@ -45,8 +53,11 @@ export interface CountrySummary {
 export class CovidService {
   private confirmedUrl = 'https://localhost:7137/odata/Confirmed';
   private locationsUrl = 'https://localhost:7137/odata/Locations';
+  private deathsUrl = 'https://localhost:7137/odata/Deaths';
+  private recoveredUrl = 'https://localhost:7137/odata/Recovered';
   private confirmedCountUrl = 'https://localhost:7137/odata/Confirmed/$count';
   private locationsCountUrl = 'https://localhost:7137/odata/Locations/$count';
+  private recoveredCountUrl = 'https://localhost:7137/odata/Recovered/$count';
 
   constructor(private http: HttpClient) {}
 
@@ -111,12 +122,15 @@ export class CovidService {
       })
     );
   }
+
   getSummaryGroupedByCountry(): Observable<LocationSummary[]> {
   return forkJoin({
     confirmed: this.http.get<{ value: ConfirmedRecord[] }>(this.confirmedUrl),
-    locations: this.http.get<{ value: Location[] }>(this.locationsUrl)
+    locations: this.http.get<{ value: Location[] }>(this.locationsUrl),
+    deaths: this.http.get<{ value: DeathRecord[] }>(this.deathsUrl),
+    recovered: this.http.get<{ value: any[] }>(this.recoveredUrl),
   }).pipe(
-    map(({ confirmed, locations }) => {
+    map(({ confirmed, locations, deaths, recovered }) => {
       // Bước 1: Tạo một Map để nhóm các LocationId theo CountryRegion
       const countryToLocationIds = new Map<string, number[]>();
 
@@ -132,16 +146,34 @@ export class CovidService {
         confirmedMap.set(record.LocationId, record.Quantity);
       });
 
+      const deathsMap = new Map<number, number>();
+      deaths.value.forEach(record => {
+        deathsMap.set(record.LocationId, record.Quantity);
+      });
+
+      const recoveredMap = new Map<number, number>();
+        recovered.value.forEach(record => {
+          recoveredMap.set(record.LocationId, record.Quantity);
+        });
+
       // Bước 3: Tính tổng ca nhiễm cho từng quốc gia và lấy ngẫu nhiên một LocationId làm đại diện
-      const countryTotals = new Map<string, { totalConfirmed: number, representativeLocationId: number }>();
+      const countryTotals = new Map<string, { 
+        totalConfirmed: number, 
+        totalDeaths: number,
+        totalRecovered: number,
+        representativeLocationId: number 
+      }>();
 
       // Duyệt qua tất cả các LocationIds của từng quốc gia và cộng dồn tổng ca nhiễm
       countryToLocationIds.forEach((locationIds, country) => {
         let totalConfirmed = 0;
+        let totalDeaths = 0;
+        let totalRecovered = 0;
 
-        // Cộng dồn tổng ca nhiễm cho tất cả các LocationId của quốc gia
         locationIds.forEach(locationId => {
           totalConfirmed += confirmedMap.get(locationId) || 0;
+          totalDeaths += deathsMap.get(locationId) || 0;
+          totalRecovered += recoveredMap.get(locationId) || 0;
         });
 
         // Chọn một LocationId ngẫu nhiên trong danh sách LocationIds của quốc gia
@@ -149,25 +181,26 @@ export class CovidService {
 
         countryTotals.set(country, {
           totalConfirmed,
+          totalDeaths,
+          totalRecovered,
           representativeLocationId
         });
       });
 
       // Bước 4: Trả về các quốc gia và tổng ca nhiễm của chúng
-      const summaries: LocationSummary[] = Array.from(countryTotals.entries()).map(([country, { totalConfirmed, representativeLocationId }]) => ({
+      const summaries: LocationSummary[] = Array.from(countryTotals.entries()).map(([country, { totalConfirmed, totalDeaths, totalRecovered, representativeLocationId }]) => ({
         locationId: representativeLocationId,  // Lấy LocationId đại diện
         country,
         province: null,  // Không cần province ở đây nếu chỉ nhóm theo quốc gia
         totalConfirmed,
-        totalDeaths: 0,  // Bạn có thể tính thêm totalDeaths nếu cần
-        totalRecovered: 0  // Bạn có thể tính thêm totalRecovered nếu cần
+        totalDeaths, 
+        totalRecovered
       }));
 
-      console.log('Summariessss:', summaries); // Debug kết quả
+      console.log('Summariessss:', summaries);
       return summaries;
     })
   );
 }
-
 
 }
