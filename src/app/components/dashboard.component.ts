@@ -7,8 +7,14 @@ import { TreemapComponent } from './treemap.component';
   standalone: true,
   imports: [WorldMapComponent, TreemapComponent],
   template: `
-    <app-world-map></app-world-map>
-    <app-treemap></app-treemap>
+    <button (click)="currentType='confirmed'">Confirmed</button>
+    <button (click)="currentType='deaths'">Deaths</button>
+    <button (click)="currentType='recovered'">Recovered</button>
+
+    <app-world-map [type]="currentType"></app-world-map>
+    <app-treemap [type]="currentType"></app-treemap>
   `
 })
-export class DashboardComponent {}
+export class DashboardComponent {
+  currentType: 'confirmed' | 'deaths' | 'recovered' = 'confirmed';
+}
